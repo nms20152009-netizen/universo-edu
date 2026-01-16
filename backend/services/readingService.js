@@ -1,5 +1,7 @@
 import aiService from './aiService.js';
 import Reading from '../models/Reading.js';
+import { isUsingSupabase } from '../config/db.js';
+import { ReadingDAO } from './supabaseDAL.js';
 
 class ReadingService {
     constructor() {
@@ -44,12 +46,23 @@ FORMATO DE SALIDA (JSON ÚNICAMENTE):
         const todayEnd = new Date(targetDate);
         todayEnd.setHours(23, 59, 59, 999);
 
-        const existing = await Reading.findOne({
-            publishDate: {
-                $gte: todayStart,
-                $lte: todayEnd
-            }
-        });
+        let existing;
+        if (isUsingSupabase()) {
+            const readings = await ReadingDAO.find({
+                publishDate: {
+                    $gte: todayStart,
+                    $lte: todayEnd
+                }
+            });
+            existing = readings[0];
+        } else {
+            existing = await Reading.findOne({
+                publishDate: {
+                    $gte: todayStart,
+                    $lte: todayEnd
+                }
+            });
+        }
 
         if (existing) {
             console.log('📅 Reading for today already exists:', existing.title);
@@ -98,16 +111,27 @@ Mínimo 1500 palabras.`;
 
             const readingData = JSON.parse(jsonMatch[0]);
 
-            const reading = new Reading({
-                ...readingData,
-                publishDate: targetDate,
-                readingTime: 15,
-                isPublished: false // Will be published by scheduler at 1:30 PM
-            });
+            if (isUsingSupabase()) {
+                const reading = await ReadingDAO.create({
+                    ...readingData,
+                    publishDate: targetDate,
+                    readingTime: 15,
+                    isPublished: false
+                });
+                console.log(`✅ Daily anti-bullying reading generated: ${reading.title}`);
+                return reading;
+            } else {
+                const reading = new Reading({
+                    ...readingData,
+                    publishDate: targetDate,
+                    readingTime: 15,
+                    isPublished: false // Will be published by scheduler at 1:30 PM
+                });
 
-            await reading.save();
-            console.log(`✅ Daily anti-bullying reading generated: ${reading.title}`);
-            return reading;
+                await reading.save();
+                console.log(`✅ Daily anti-bullying reading generated: ${reading.title}`);
+                return reading;
+            }
 
         } catch (error) {
             console.error('❌ Error generating reading:', error);
@@ -117,6 +141,14 @@ Mínimo 1500 palabras.`;
 
     async getLatestReading() {
         const now = new Date();
+        if (isUsingSupabase()) {
+            const readings = await ReadingDAO.find(
+                { isPublished: true, publishDate: { $lte: now } },
+                { sort: { publishDate: -1 }, limit: 1 }
+            );
+            return readings[0];
+        }
+
         return Reading.findOne({
             isPublished: true,
             publishDate: { $lte: now }

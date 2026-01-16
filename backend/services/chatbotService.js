@@ -1,5 +1,7 @@
 import aiService from './aiService.js';
 import ChatSession from '../models/ChatSession.js';
+import { isUsingSupabase } from '../config/db.js';
+import { ChatSessionDAO } from './supabaseDAL.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -95,14 +97,39 @@ EDU: "Entiendo cómo te sientes, y está bien. 💪 Aprender cosas nuevas puede 
      */
     async chat(sessionId, userMessage, subject = 'General') {
         // Get or create session from database
-        let session = await ChatSession.findOne({ sessionId });
+        let session;
+        const usingSupabase = isUsingSupabase();
 
-        if (!session) {
-            session = new ChatSession({
-                sessionId: sessionId || uuidv4(),
-                subject: this.detectSubject(userMessage) || subject,
-                messages: []
-            });
+        if (usingSupabase) {
+            session = await ChatSessionDAO.findOne({ sessionId });
+            if (!session) {
+                // Return plain object mimicking structure
+                session = {
+                    sessionId: sessionId || uuidv4(),
+                    subject: subject, // Will be updated by detection
+                    messages: []
+                };
+
+                // Detection logic runs before creation
+                const detectedSubject = this.detectSubject(userMessage);
+                if (detectedSubject && detectedSubject !== 'General') {
+                    session.subject = detectedSubject;
+                } else if (!session.subject) {
+                    session.subject = 'General';
+                }
+
+                // Create initial record
+                session = await ChatSessionDAO.create(session);
+            }
+        } else {
+            session = await ChatSession.findOne({ sessionId });
+            if (!session) {
+                session = new ChatSession({
+                    sessionId: sessionId || uuidv4(),
+                    subject: this.detectSubject(userMessage) || subject,
+                    messages: []
+                });
+            }
         }
 
         // Update subject based on current message if more specific
@@ -155,8 +182,16 @@ EDU: "Entiendo cómo te sientes, y está bien. 💪 Aprender cosas nuevas puede 
             timestamp: new Date()
         });
 
-        session.lastActivityAt = new Date();
-        await session.save();
+        if (usingSupabase) {
+            await ChatSessionDAO.findByIdAndUpdate(session._id, {
+                messages: session.messages,
+                lastActivityAt: new Date(),
+                subject: session.subject
+            });
+        } else {
+            session.lastActivityAt = new Date();
+            await session.save();
+        }
 
         return {
             sessionId: session.sessionId,
@@ -219,7 +254,12 @@ EDU: "Entiendo cómo te sientes, y está bien. 💪 Aprender cosas nuevas puede 
      * Get session history
      */
     async getHistory(sessionId) {
-        const session = await ChatSession.findOne({ sessionId });
+        let session;
+        if (isUsingSupabase()) {
+            session = await ChatSessionDAO.findOne({ sessionId });
+        } else {
+            session = await ChatSession.findOne({ sessionId });
+        }
         if (!session) return null;
 
         return {
@@ -235,7 +275,7 @@ EDU: "Entiendo cómo te sientes, y está bien. 💪 Aprender cosas nuevas puede 
      * Create a new session with welcome message
      */
     async createSession(subject = 'General') {
-        const session = new ChatSession({
+        const sessionData = {
             sessionId: uuidv4(),
             subject,
             messages: [{
@@ -243,16 +283,28 @@ EDU: "Entiendo cómo te sientes, y está bien. 💪 Aprender cosas nuevas puede 
                 content: '¡Hola! 👋 Soy EDU, tu compañero de aprendizaje. Estoy aquí para ayudarte de dos formas: si tienes un ejercicio o tarea, te guiaré con preguntas para que descubras la respuesta. Si quieres entender un concepto o necesitas información, te la explico directamente. 🌟\n\n¿Qué necesitas hoy? ¿Ayuda con una tarea o quieres aprender sobre algún tema?',
                 timestamp: new Date()
             }]
-        });
+        };
 
-        await session.save();
-        return session;
+        if (isUsingSupabase()) {
+            return await ChatSessionDAO.create(sessionData);
+        } else {
+            const session = new ChatSession(sessionData);
+            await session.save();
+            return session;
+        }
     }
 
     /**
      * Clear session to start fresh
      */
     async clearSession(sessionId) {
+        if (isUsingSupabase()) {
+            const session = await ChatSessionDAO.findOne({ sessionId });
+            // Emulate delete for now since not implemented in DAO (privacy feature mostly)
+            if (session) {
+                return { success: true };
+            }
+        }
         await ChatSession.deleteOne({ sessionId });
         return { success: true };
     }

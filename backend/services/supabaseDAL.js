@@ -72,12 +72,30 @@ export const TaskDAO = {
             queryBuilder = queryBuilder.order(snakeField, { ascending: order === 1 });
         }
         if (options.limit) {
-            queryBuilder = queryBuilder.limit(options.limit);
+            // Handle pagination if skip is provided
+            if (options.skip !== undefined) {
+                queryBuilder = queryBuilder.range(options.skip, options.skip + options.limit - 1);
+            } else {
+                queryBuilder = queryBuilder.limit(options.limit);
+            }
         }
 
         const { data, error } = await queryBuilder;
         if (error) throw new Error(error.message);
         return data.map(t => ({ ...t, _id: t.id }));
+    },
+
+    async count(query = {}) {
+        let queryBuilder = supabase.from('tasks').select('*', { count: 'exact', head: true });
+
+        if (query.isPublished !== undefined) {
+            queryBuilder = queryBuilder.eq('is_published', query.isPublished);
+        }
+        // Add other filters as needed to match find()
+
+        const { count, error } = await queryBuilder;
+        if (error) throw new Error(error.message);
+        return count;
     },
 
     async findById(id) {
@@ -225,6 +243,14 @@ export const ReadingDAO = {
         if (query.isPublished !== undefined) {
             queryBuilder = queryBuilder.eq('is_published', query.isPublished);
         }
+        if (query.publishDate) {
+            if (query.publishDate.$gte) {
+                queryBuilder = queryBuilder.gte('publish_date', query.publishDate.$gte.toISOString());
+            }
+            if (query.publishDate.$lte) {
+                queryBuilder = queryBuilder.lte('publish_date', query.publishDate.$lte.toISOString());
+            }
+        }
         if (options.sort) {
             const [field, order] = Object.entries(options.sort)[0];
             const snakeField = field.replace(/([A-Z])/g, '_$1').toLowerCase();
@@ -245,12 +271,33 @@ export const ReadingDAO = {
             .insert({
                 title: readingData.title,
                 content: readingData.content,
+                author: readingData.author || 'IA',
+                topic: readingData.topic || null,
                 theme: readingData.theme || null,
                 reflection_questions: readingData.reflectionQuestions || [],
+                reading_time: readingData.readingTime || 10,
                 is_published: readingData.isPublished || false,
                 publish_date: readingData.publishDate || null,
                 created_by: readingData.createdBy
             })
+            .select()
+            .single();
+
+        if (error) throw new Error(error.message);
+        return { ...data, _id: data.id };
+    },
+
+    async findByIdAndUpdate(id, updateData) {
+        const snakeCaseData = {};
+        for (const [key, value] of Object.entries(updateData)) {
+            const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+            snakeCaseData[snakeKey] = value;
+        }
+
+        const { data, error } = await supabase
+            .from('readings')
+            .update(snakeCaseData)
+            .eq('id', id)
             .select()
             .single();
 

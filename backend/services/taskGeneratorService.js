@@ -1,5 +1,7 @@
 import aiService from './aiService.js';
 import Task from '../models/Task.js';
+import { isUsingSupabase } from '../config/db.js';
+import { TaskDAO } from './supabaseDAL.js';
 
 /**
  * Task Generator Service
@@ -78,18 +80,31 @@ Responde ÚNICAMENTE con el objeto JSON solicitado.`;
         const publishDate = this.getNextPublishDate();
 
         // Create task in database
-        const task = new Task({
-            ...taskData,
-            subject,
-            weekNumber,
-            publishDate,
-            isPublished: false,
-            difficulty: 'básico',
-            createdBy
-        });
-
-        await task.save();
-        return task;
+        if (isUsingSupabase()) {
+            const taskData = {
+                ...taskData,
+                subject,
+                weekNumber,
+                publishDate,
+                isPublished: false,
+                difficulty: 'básico',
+                createdBy
+            };
+            const task = await TaskDAO.create(taskData);
+            return task;
+        } else {
+            const task = new Task({
+                ...taskData,
+                subject,
+                weekNumber,
+                publishDate,
+                isPublished: false,
+                difficulty: 'básico',
+                createdBy
+            });
+            await task.save();
+            return task;
+        }
     }
 
     /**
@@ -127,6 +142,10 @@ Responde ÚNICAMENTE con el objeto JSON solicitado.`;
 
         if (weekNumber) query.weekNumber = weekNumber;
 
+        if (isUsingSupabase()) {
+            return TaskDAO.find(query, { sort: { publishDate: -1 }, limit: 50 });
+        }
+
         return Task.find(query)
             .sort({ publishDate: -1 })
             .limit(50);
@@ -137,6 +156,14 @@ Responde ÚNICAMENTE con el objeto JSON solicitado.`;
      */
     async getAllTasks(page = 1, limit = 10) {
         const skip = (page - 1) * limit;
+
+        if (isUsingSupabase()) {
+            const [tasks, total] = await Promise.all([
+                TaskDAO.find({}, { sort: { createdAt: -1 }, skip, limit }),
+                TaskDAO.count()
+            ]);
+            return { tasks, total, page, pages: Math.ceil(total / limit) };
+        }
 
         const [tasks, total] = await Promise.all([
             Task.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
@@ -150,6 +177,10 @@ Responde ÚNICAMENTE con el objeto JSON solicitado.`;
      * Publish a task manually
      */
     async publishTask(taskId) {
+        if (isUsingSupabase()) {
+            return TaskDAO.findByIdAndUpdate(taskId, { isPublished: true, publishDate: new Date() });
+        }
+
         const task = await Task.findByIdAndUpdate(
             taskId,
             { isPublished: true, publishDate: new Date() },

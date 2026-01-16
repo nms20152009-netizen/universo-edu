@@ -1,8 +1,10 @@
 import cron from 'node-cron';
 import Task from '../models/Task.js';
 import Schedule from '../models/Schedule.js';
-import taskGeneratorService from './taskGeneratorService.js';
 import Reading from '../models/Reading.js';
+import { isUsingSupabase } from '../config/db.js';
+import { TaskDAO, ScheduleDAO, ReadingDAO } from './supabaseDAL.js';
+import taskGeneratorService from './taskGeneratorService.js';
 import readingService from './readingService.js';
 
 /**
@@ -66,40 +68,81 @@ class SchedulerService {
     async processScheduledPublications() {
         try {
             const now = new Date();
+            let publishedCount = 0;
 
-            // Find scheduled items that are due
-            const itemsToPublish = await Task.find({
-                status: 'scheduled',
-                publishDate: { $lte: now }
-            });
+            if (isUsingSupabase()) {
+                // Supabase Logic
+                // Find scheduled items that are due
+                const itemsToPublish = await TaskDAO.find({
+                    status: 'scheduled',
+                    publishDate: { $lte: now }
+                });
 
-            if (itemsToPublish.length > 0) {
-                console.log(`🕐 Real-time publisher: publishing ${itemsToPublish.length} tasks/notices`);
+                if (itemsToPublish.length > 0) {
+                    console.log(`🕐 Real-time publisher: publishing ${itemsToPublish.length} tasks/notices`);
 
-                for (const item of itemsToPublish) {
-                    item.status = 'published';
-                    item.isPublished = true;
-                    await item.save();
-                    console.log(`✅ Published [${item.type}]: ${item.title}`);
+                    for (const item of itemsToPublish) {
+                        await TaskDAO.findByIdAndUpdate(item._id, { status: 'published', isPublished: true });
+                        console.log(`✅ Published [${item.type}]: ${item.title}`);
+                    }
+                    publishedCount += itemsToPublish.length;
                 }
-            }
 
-            // Also publish due readings
-            const readingsToPublish = await Reading.find({
-                isPublished: false,
-                publishDate: { $lte: now }
-            });
+                // Also publish due readings
+                const readingsToPublish = await ReadingDAO.find({
+                    isPublished: false,
+                    publishDate: { $lte: now }
+                });
 
-            if (readingsToPublish.length > 0) {
-                console.log(`📖 Real-time publisher: publishing ${readingsToPublish.length} readings`);
-                for (const reading of readingsToPublish) {
-                    reading.isPublished = true;
-                    await reading.save();
-                    console.log(`✅ Published [reading]: ${reading.title}`);
+                if (readingsToPublish.length > 0) {
+                    console.log(`📖 Real-time publisher: publishing ${readingsToPublish.length} readings`);
+                    for (const reading of readingsToPublish) {
+                        await ReadingDAO.findByIdAndUpdate(reading._id, { isPublished: true });
+                        console.log(`✅ Published [reading]: ${reading.title}`);
+                    }
+                    publishedCount += readingsToPublish.length;
                 }
-            }
 
-            return itemsToPublish.length + readingsToPublish.length;
+                return publishedCount;
+
+            } else {
+                // Mongoose Logic
+                // Find scheduled items that are due
+                const itemsToPublish = await Task.find({
+                    status: 'scheduled',
+                    publishDate: { $lte: now }
+                });
+
+                if (itemsToPublish.length > 0) {
+                    console.log(`🕐 Real-time publisher: publishing ${itemsToPublish.length} tasks/notices`);
+
+                    for (const item of itemsToPublish) {
+                        item.status = 'published';
+                        item.isPublished = true;
+                        await item.save();
+                        console.log(`✅ Published [${item.type}]: ${item.title}`);
+                    }
+                    publishedCount += itemsToPublish.length;
+                }
+
+                // Also publish due readings
+                const readingsToPublish = await Reading.find({
+                    isPublished: false,
+                    publishDate: { $lte: now }
+                });
+
+                if (readingsToPublish.length > 0) {
+                    console.log(`📖 Real-time publisher: publishing ${readingsToPublish.length} readings`);
+                    for (const reading of readingsToPublish) {
+                        reading.isPublished = true;
+                        await reading.save();
+                        console.log(`✅ Published [reading]: ${reading.title}`);
+                    }
+                    publishedCount += readingsToPublish.length;
+                }
+
+                return publishedCount;
+            }
         } catch (error) {
             console.error('❌ Error processing scheduled publications:', error);
         }
@@ -115,11 +158,30 @@ class SchedulerService {
             const weekNumber = this.getWeekNumber(now);
 
             // Find active schedules for today
-            const activeSchedules = await Schedule.find({
-                isActive: true,
-                publishDays: dayOfWeek,
-                weekNumber
-            });
+            let activeSchedules;
+
+            if (isUsingSupabase()) {
+                // ScheduleDAO.find accepts basic match object, may need custom logic for 'publishDays' (string match?)
+                // Assuming 'publishDays' in Supabase is a text column, simplest equals match works if exact.
+                // But dayOfWeek is 'monday', 'tuesday'. If DB has 'monday', good.
+                // ScheduleDAO.find implementation: builder.match(query) -> eq checks.
+                // ScheduleDAO.find(query) -> eq('is_active', query.isActive) only in current impl?
+                // I need to check ScheduleDAO implementation. 
+                // It only checks isActive. It returns ALL then map filters? No.
+                // ScheduleDAO.find only implements 'isActive' filter in current code. 
+                // I need to update ScheduleDAO to support more filters if I want to use it efficiently.
+                // OR I just fetch all active and filter in memory since schedules are few.
+                const allActive = await ScheduleDAO.find({ isActive: true });
+                activeSchedules = allActive.filter(s =>
+                    s.publishDays === dayOfWeek && s.weekNumber === weekNumber
+                );
+            } else {
+                activeSchedules = await Schedule.find({
+                    isActive: true,
+                    publishDays: dayOfWeek,
+                    weekNumber
+                });
+            }
 
             console.log(`📅 Found ${activeSchedules.length} active schedules for ${dayOfWeek}`);
 
@@ -132,8 +194,14 @@ class SchedulerService {
                         schedule.createdBy
                     );
 
-                    schedule.tasksGenerated += 1;
-                    await schedule.save();
+                    if (isUsingSupabase()) {
+                        await ScheduleDAO.findByIdAndUpdate(schedule._id, {
+                            tasksGenerated: (schedule.tasksGenerated || 0) + 1
+                        });
+                    } else {
+                        schedule.tasksGenerated += 1;
+                        await schedule.save();
+                    }
 
                     console.log(`✅ Generated task: ${task.title}`);
                 } catch (genError) {

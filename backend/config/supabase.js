@@ -4,15 +4,25 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-    console.warn('⚠️ Supabase credentials not found. Database operations will fail.');
+    console.warn('⚠️ Supabase credentials not found. Database operations will fail if Supabase is enabled.');
 }
 
-export const supabase = createClient(supabaseUrl || '', supabaseKey || '', {
-    auth: {
-        persistSession: false,
-        autoRefreshToken: false
-    }
-});
+// Create client if credentials exist, otherwise export a dummy object to prevent startup crash
+export const supabase = (supabaseUrl && supabaseKey)
+    ? createClient(supabaseUrl, supabaseKey, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false
+        }
+    })
+    : {
+        from: () => ({
+            select: () => ({ data: null, error: { message: 'Supabase not configured' } }),
+            insert: () => ({ select: () => ({ single: () => ({ data: null, error: { message: 'Supabase not configured' } }) }) }),
+            update: () => ({ eq: () => ({ select: () => ({ single: () => ({ data: null, error: { message: 'Supabase not configured' } }) }) }) }),
+            delete: () => ({ eq: () => ({ error: { message: 'Supabase not configured' } }) }),
+        })
+    };
 
 /**
  * Test Supabase connection
