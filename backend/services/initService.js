@@ -1,16 +1,30 @@
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 import Task from '../models/Task.js';
+import { isUsingSupabase } from '../config/db.js';
+import { UserDAO, TaskDAO } from './supabaseDAL.js';
 
 /**
  * Initialize database with sample data if empty
- * Called automatically on server start in development mode
+ * Called automatically on server start
  */
 export async function initializeDatabase() {
     try {
-        // Check if we already have data
-        const userCount = await User.countDocuments();
-        const taskCount = await Task.countDocuments();
+        const usingSupabase = isUsingSupabase();
+
+        let userCount, taskCount;
+
+        if (usingSupabase) {
+            // Use Supabase DAL
+            const users = await UserDAO.findOne({ role: 'admin' });
+            userCount = users ? 1 : 0;
+            const tasks = await TaskDAO.find({}, { limit: 1 });
+            taskCount = tasks.length;
+        } else {
+            // Use Mongoose
+            userCount = await User.countDocuments();
+            taskCount = await Task.countDocuments();
+        }
 
         if (userCount > 0 && taskCount > 0) {
             console.log('📦 Database already initialized');
@@ -21,18 +35,35 @@ export async function initializeDatabase() {
 
         // Create admin user if not exists
         if (userCount === 0) {
-            await User.create({
-                name: 'Administrador',
-                email: 'admin@universo-edu.mx',
-                password: 'admin1234',
-                role: 'admin'
-            });
+            if (usingSupabase) {
+                await UserDAO.create({
+                    name: 'Administrador',
+                    email: 'admin@universo-edu.mx',
+                    password: 'admin1234',
+                    role: 'admin'
+                });
+            } else {
+                await User.create({
+                    name: 'Administrador',
+                    email: 'admin@universo-edu.mx',
+                    password: 'admin1234',
+                    role: 'admin'
+                });
+            }
             console.log('   ✅ Admin user created (admin@universo-edu.mx / admin1234)');
         }
 
         // Create sample tasks if not exists
         if (taskCount === 0) {
-            const admin = await User.findOne({ role: 'admin' });
+            let adminId;
+
+            if (usingSupabase) {
+                const admin = await UserDAO.findOne({ role: 'admin' });
+                adminId = admin?.id;
+            } else {
+                const admin = await User.findOne({ role: 'admin' });
+                adminId = admin?._id;
+            }
 
             const sampleTasks = [
                 {
@@ -53,7 +84,7 @@ export async function initializeDatabase() {
                     weekNumber: 1,
                     isPublished: true,
                     publishDate: new Date(),
-                    createdBy: admin?._id
+                    createdBy: adminId
                 },
                 {
                     title: 'Poesía Mexicana: Creando Versos',
@@ -73,7 +104,7 @@ export async function initializeDatabase() {
                     weekNumber: 1,
                     isPublished: true,
                     publishDate: new Date(),
-                    createdBy: admin?._id
+                    createdBy: adminId
                 },
                 {
                     title: 'Héroes de la Independencia',
@@ -93,11 +124,17 @@ export async function initializeDatabase() {
                     weekNumber: 1,
                     isPublished: true,
                     publishDate: new Date(),
-                    createdBy: admin?._id
+                    createdBy: adminId
                 }
             ];
 
-            await Task.insertMany(sampleTasks);
+            if (usingSupabase) {
+                for (const task of sampleTasks) {
+                    await TaskDAO.create(task);
+                }
+            } else {
+                await Task.insertMany(sampleTasks);
+            }
             console.log(`   ✅ ${sampleTasks.length} sample tasks created`);
         }
 

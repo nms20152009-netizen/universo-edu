@@ -1,14 +1,31 @@
 import mongoose from 'mongoose';
+import { testSupabaseConnection } from './supabase.js';
 
 let mongod = null;
+let useSupabase = false;
 
 /**
- * Connect to MongoDB
- * - Uses MongoDB Atlas if MONGODB_URI is a valid Atlas connection string
+ * Connect to database
+ * - Uses Supabase if SUPABASE_URL is configured (production)
  * - Falls back to MongoDB Memory Server for development if local MongoDB is not available
  */
 export const connectDB = async () => {
     try {
+        // Check if Supabase is configured (production mode)
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_KEY;
+
+        if (supabaseUrl && supabaseKey && process.env.NODE_ENV === 'production') {
+            console.log('🔄 Attempting Supabase connection (production mode)...');
+            const connected = await testSupabaseConnection();
+            if (connected) {
+                useSupabase = true;
+                console.log('✅ Using Supabase for persistence');
+                return { useSupabase: true };
+            }
+            console.log('⚠️ Supabase connection failed, falling back to MongoDB...');
+        }
+
         let uri = process.env.MONGODB_URI;
 
         // Check if URI is for Atlas or valid MongoDB
@@ -25,7 +42,19 @@ export const connectDB = async () => {
                 console.log('✅ MongoDB Memory Server started successfully');
             } catch (memError) {
                 console.error('❌ Could not start MongoDB Memory Server:', memError.message);
-                throw new Error('No MongoDB available. Please install MongoDB or provide a valid MONGODB_URI');
+
+                // Last resort: try Supabase even in dev mode
+                if (supabaseUrl && supabaseKey) {
+                    console.log('🔄 Trying Supabase as fallback...');
+                    const connected = await testSupabaseConnection();
+                    if (connected) {
+                        useSupabase = true;
+                        console.log('✅ Using Supabase for persistence (fallback)');
+                        return { useSupabase: true };
+                    }
+                }
+
+                throw new Error('No database available. Please configure SUPABASE_URL/SUPABASE_KEY or provide a valid MONGODB_URI');
             }
         }
 
@@ -38,12 +67,17 @@ export const connectDB = async () => {
         // Create indexes
         await createIndexes();
 
-        return conn;
+        return { useSupabase: false, connection: conn };
     } catch (error) {
-        console.error(`❌ MongoDB Connection Error: ${error.message}`);
+        console.error(`❌ Database Connection Error: ${error.message}`);
         process.exit(1);
     }
 };
+
+/**
+ * Check if using Supabase
+ */
+export const isUsingSupabase = () => useSupabase;
 
 /**
  * Create database indexes for optimal performance
@@ -61,7 +95,9 @@ const createIndexes = async () => {
  * Disconnect and cleanup
  */
 export const disconnectDB = async () => {
-    await mongoose.disconnect();
+    if (!useSupabase) {
+        await mongoose.disconnect();
+    }
     if (mongod) {
         await mongod.stop();
         mongod = null;
@@ -69,4 +105,3 @@ export const disconnectDB = async () => {
 };
 
 export default connectDB;
-

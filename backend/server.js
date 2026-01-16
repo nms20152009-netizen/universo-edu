@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
+import { testSupabaseConnection } from './config/supabase.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import schedulerService from './services/schedulerService.js';
 import { initializeDatabase } from './services/initService.js';
