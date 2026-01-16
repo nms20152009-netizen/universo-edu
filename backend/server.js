@@ -39,8 +39,22 @@ app.get('/health', (req, res) => {
         status: 'ok',
         service: 'UNIVERSO EDU API',
         timestamp: new Date().toISOString(),
-        timezone: process.env.TZ
+        timezone: process.env.TZ,
+        dbConnection: global.isDbConnected ? 'active' : 'connecting'
     });
+});
+
+// Root endpoint for status check
+app.get('/', (req, res) => {
+    res.send(`
+        <html>
+            <body style="font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #f0f9ff;">
+                <h1 style="color: #0369a1;">🎓 UNIVERSO EDU API</h1>
+                <p style="color: #0c4a6e; font-size: 1.2rem;">Status: <strong>Online</strong> 🚀</p>
+                <p style="color: #64748b;">Backend running on Vercel</p>
+            </body>
+        </html>
+    `);
 });
 
 // API Routes
