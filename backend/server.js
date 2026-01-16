@@ -44,6 +44,30 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
+// Middleware to ensure DB connection in serverless environment (Vercel)
+app.use(async (req, res, next) => {
+    if (process.env.VERCEL) {
+        try {
+            // Check if we need to initialize
+            // Using a global check to avoid re-connecting on every hot lambda, 
+            // though connectDB handles idempotency nicely usually.
+            if (!global.isDbConnected) {
+                console.log('⚡ Vercel: Initializing database connection...');
+                await connectDB();
+                if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+                    await testSupabaseConnection(); // Ensure supabase flag is set
+                }
+                global.isDbConnected = true;
+            }
+        } catch (error) {
+            console.error('❌ Vercel DB Init Error:', error);
+            return res.status(500).json({ error: 'Database connection failed' });
+        }
+    }
+    next();
+});
+
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/tasks', taskRoutes);
@@ -85,6 +109,9 @@ const startServer = async () => {
     }
 };
 
-startServer();
+// Only start server contentiously if NOT on Vercel
+if (!process.env.VERCEL) {
+    startServer();
+}
 
 export default app;

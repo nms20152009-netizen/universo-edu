@@ -1,11 +1,5 @@
 {
     "version": 2,
-    "crons": [
-        {
-            "path": "/api/readings/generate-daily",
-            "schedule": "30 19 * * *"
-        }
-    ],
     "builds": [
         {
             "src": "server.js",
