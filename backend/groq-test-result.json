@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "status": 200,
+  "model": "llama-3.3-70b-versatile",
+  "content": "Hola Carlos, ¡mucho gusto! Me alegra que estés aquí para aprender.\n\nAntes de hablar sobre la suma 5 + 3, ¿podrías pensar en algo que tengas 5 de algo, como 5 lápices o 5 bolitas? ¿Y si luego te dieran 3 lápices o 3 bolitas más? ¿Cuántas lápices o bolitas tendrías en total? ¿Cómo crees que podrías encontrar la respuesta?",
+  "usage": {
+    "queue_time": 0.171784289,
+    "prompt_tokens": 93,
+    "prompt_time": 0.004430304,
+    "completion_tokens": 104,
+    "completion_time": 0.384379422,
+    "total_tokens": 197,
+    "total_time": 0.388809726
+  }
+}

@@ -1,0 +1,110 @@
+.tasks-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-xl) var(--space-lg);
+}
+
+.tasks-header {
+    text-align: center;
+    margin-bottom: var(--space-xl);
+}
+
+.tasks-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-sm);
+}
+
+.tasks-header p {
+    color: var(--color-text-light);
+    font-size: 1.1rem;
+}
+
+.tasks-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    justify-content: center;
+    margin-bottom: var(--space-xl);
+}
+
+.filter-btn {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-card);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-full);
+    font-family: var(--font-primary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.filter-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.filter-btn.active {
+    background: var(--gradient-primary);
+    border-color: transparent;
+    color: var(--color-text-inverted);
+}
+
+.tasks-content {
+    min-height: 400px;
+}
+
+.tasks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-lg);
+}
+
+.tasks-loading,
+.tasks-error,
+.tasks-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2xl);
+    text-align: center;
+}
+
+.tasks-loading p,
+.tasks-empty p {
+    color: var(--color-text-light);
+    margin-top: var(--space-md);
+}
+
+.tasks-empty h3 {
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-sm);
+}
+
+.tasks-error {
+    color: var(--color-error);
+}
+
+.tasks-error .emoji-lg {
+    font-size: 4rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tasks-header h1 {
+        font-size: 1.8rem;
+    }
+
+    .filter-btn {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: 0.85rem;
+    }
+
+    .tasks-grid {
+        grid-template-columns: 1fr;
+    }
+}

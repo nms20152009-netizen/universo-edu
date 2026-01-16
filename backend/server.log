@@ -1,0 +1,35 @@
+🤖 QWEN Service initialized with API keys
+🧪 Attempting to use MongoDB Memory Server for development...
+✅ MongoDB Memory Server started successfully
+✅ MongoDB Connected: 127.0.0.1
+🌱 Initializing database with sample data...
+   ✅ Admin user created (admin@universo-edu.mx / admin1234)
+   ✅ 3 sample tasks created
+🎉 Database initialization complete!
+
+✅ Task scheduler initialized (13:00 Mon-Fri, America/Mexico_City)
+✅ Task generator initialized (12:00 Mon-Fri, America/Mexico_City)
+
+╔════════════════════════════════════════════════╗
+║         🎓 UNIVERSO EDU - Backend API          ║
+╠════════════════════════════════════════════════╣
+║  Server running on port 3002                    ║
+║  Timezone: America/Mexico_City                 ║
+║  Environment: development                    ║
+╚════════════════════════════════════════════════╝
+      
+🔐 Login attempt: { email: 'admin@universo-edu.mx', passwordProvided: true }
+👤 User lookup result: {
+  found: true,
+  email: 'admin@universo-edu.mx',
+  hasPassword: true,
+  isActive: true
+}
+🔑 Comparing passwords...
+🔑 Password match result: true
+✅ Login successful for: admin@universo-edu.mx
+⚠️ API authentication failed - switching to MOCK MODE
+🔄 Running scheduled task generation...
+📅 Found 0 active schedules for wednesday
+🕐 Running scheduled task publication...
+📋 Found 0 tasks to publish

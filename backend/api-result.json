@@ -1,0 +1,14 @@
+{
+  "success": false,
+  "error": "Request failed with status code 401",
+  "status": 401,
+  "data": {
+    "error": {
+      "message": "Incorrect API key provided. For details, see: https://help.aliyun.com/zh/model-studio/error-code#apikey-error",
+      "type": "invalid_request_error",
+      "param": null,
+      "code": "invalid_api_key"
+    },
+    "request_id": "06ea35c4-6a44-9657-815c-1150ec2a107f"
+  }
+}

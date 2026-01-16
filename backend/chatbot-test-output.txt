@@ -1,0 +1,29 @@
+﻿============================================================
+­ƒº¬ TESTING UNIVERSO EDU CHATBOT
+============================================================
+
+­ƒôè 1. Checking AI status...
+   Provider: groq
+   Features: {"socraticMethod":true,"memoryEnabled":true,"subjectDetection":true,"maxHistoryMessages":15}
+
+­ƒåò 2. Creating new session...
+   Session ID: 0acc242a-a5de-4dfe-8d9d-f79b8f30221d
+   Welcome: ┬íHola! ­ƒæï Soy EDU, tu compa├▒ero de aprendizaje. Estoy aqu├¡ para ayudarte a enten...
+
+­ƒÆ¼ 3. Sending message with name...
+   Response: ┬íHola Carlos! ­ƒÖïÔÇìÔÖé´©Å Me alegra conocerte. Las matem├íticas pueden ser divertidas, ┬┐no crees? ­ƒöó ┬┐Qu├® espec├¡ficamente te est├í costando en matem├íticas? ┬┐Es algo sobre n├║meros, figuras, operaciones o tal vez algo m├ís? ┬┐Puedes contarme un poco sobre lo que est├ís tratando de resolver? ­ƒôØ
+
+­ƒÆ¼ 4. Asking math question...
+   Response: ┬íExcelente elecci├│n, Carlos! ­ƒñö Para resolver multiplicaciones como 8 x 7, podemos pensar en sumas repetidas. ┬┐Cu├ínto ser├¡a 8 + 8 + 8 + 8 + 8 + 8 + 8? ┬┐O tal vez hay una forma m├ís f├ícil de hacerlo? ┬┐Recuerdas la tabla de multiplicar del 7 o del 8? ­ƒôè ┬┐Qu├® crees que podr├¡as hacer para encontrar la respuesta?
+
+­ƒÆ¼ 5. Testing memory...
+   Response: ┬íClaro que s├¡, Carlos! ­ƒÿè Me acuerdo perfectamente. Eres Carlos, y estamos trabajando juntos en tu problema de matem├íticas, espec├¡ficamente en la multiplicaci├│n 8 x 7. ┬┐Quieres seguir adelante con eso o necesitas ayuda con algo m├ís? ­ƒñö
+
+­ƒÆ¼ 6. Asking conceptual question...
+   Response: ┬íGenial, Carlos! ­ƒñô El MCM significa "M├¡nimo Com├║n M├║ltiplo". Es el n├║mero m├ís peque├▒o que es m├║ltiplo de dos o m├ís n├║meros. Por ejemplo, si queremos encontrar el MCM de 6 y 8, necesitar├¡amos encontrar el n├║mero m├ís peque├▒o que pueda dividirse entre 6 y 8 sin dejar resto. ┬┐Puedes pensar en algunos m├║ltiplos de 6 y 8 para empezar a encontrar ese n├║mero com├║n? ­ƒôØ ┬┐Qu├® n├║meros te vienen a la mente?
+
+============================================================
+Ô£à ALL TESTS PASSED!
+   - AI Provider: groq
+   - Session messages: 9
+============================================================
